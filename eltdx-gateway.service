@@ -1,0 +1,16 @@
+[Unit]
+Description=eltdx HTTP gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=break
+WorkingDirectory=/opt/eltdx-tick-adapter
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/eltdx-tick-adapter/.venv/bin/eltdx-http --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

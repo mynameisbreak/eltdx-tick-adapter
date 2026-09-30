@@ -1,0 +1,66 @@
+name: eltdx_source
+display_name: "eltdx 通达信行情"
+auth:
+  type: none
+
+datasets:
+  realtime:
+    url: http://127.0.0.1:3021/realtime
+    method: GET
+    rpm: 60
+    timeout: 30
+    response_path: data
+    pct_unit: decimal
+    field_map:
+      symbol: symbol
+      name: name
+      last_price: last_price
+      prev_close: prev_close
+      open: open
+      high: high
+      low: low
+      volume: volume
+      amount: amount
+      change_pct: change_pct
+
+  minute:
+    url: http://127.0.0.1:3021/minute
+    method: POST
+    batch: 20
+    rpm: 60
+    timeout: 60
+    response_path: data
+    symbols_param: symbols
+    start_param: start_time
+    end_param: end_time
+    freq_param: period
+    field_map:
+      symbol: symbol
+      datetime: datetime
+      open: open
+      high: high
+      low: low
+      close: close
+      volume: volume
+      amount: amount
+
+  full_minute:
+    url: http://127.0.0.1:3021/full_minute
+    method: POST
+    batch: 100
+    rpm: 30
+    timeout: 60
+    response_path: data
+    symbols_param: symbols
+    start_param: start_time
+    end_param: end_time
+    freq_param: period
+    field_map:
+      symbol: symbol
+      datetime: datetime
+      open: open
+      high: high
+      low: low
+      close: close
+      volume: volume
+      amount: amount

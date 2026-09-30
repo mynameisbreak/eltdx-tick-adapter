@@ -1,0 +1,21 @@
+[project]
+name = "eltdx-tick-adapter"
+version = "0.1.0"
+description = "Expose eltdx market data through tick-stock-panel custom data source endpoints"
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "httpx>=0.27,<1",
+  "uvicorn[standard]>=0.30,<1",
+  "pydantic>=2.7,<3",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8,<9", "pytest-asyncio>=0.23,<1"]
+
+[project.scripts]
+eltdx-tick-adapter = "app.main:run"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+asyncio_mode = "auto"

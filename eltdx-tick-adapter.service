@@ -1,0 +1,19 @@
+[Unit]
+Description=eltdx tick-stock-panel adapter
+After=network-online.target eltdx-gateway.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=break
+WorkingDirectory=/opt/eltdx-tick-adapter
+Environment=PYTHONUNBUFFERED=1
+Environment=ELTDX_GATEWAY_URL=http://127.0.0.1:8000
+Environment=HOST=127.0.0.1
+Environment=PORT=3021
+ExecStart=/opt/eltdx-tick-adapter/.venv/bin/eltdx-tick-adapter
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
