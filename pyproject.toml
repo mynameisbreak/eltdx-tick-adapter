@@ -4,10 +4,12 @@ version = "0.1.0"
 description = "Expose eltdx market data through tick-stock-panel custom data source endpoints"
 requires-python = ">=3.10"
 dependencies = [
+  "eltdx[http]",
   "fastapi>=0.115,<1",
   "httpx>=0.27,<1",
   "uvicorn[standard]>=0.30,<1",
   "pydantic>=2.7,<3",
+  "tzdata>=2024.1",
 ]
 
 [project.optional-dependencies]
@@ -15,6 +17,13 @@ test = ["pytest>=8,<9", "pytest-asyncio>=0.23,<1"]
 
 [project.scripts]
 eltdx-tick-adapter = "app.main:run"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
