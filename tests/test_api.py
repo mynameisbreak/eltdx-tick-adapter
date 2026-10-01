@@ -25,14 +25,13 @@ def test_health(client: tuple[TestClient, AsyncMock]) -> None:
 def test_realtime_requests_codes_before_full_market_quotes(client: tuple[TestClient, AsyncMock]) -> None:
     test_client, gateway = client
     gateway.call.side_effect = [
-        ["sz000001"],
+        [{"exchange": "sz", "code": "000001", "name": "平安银行"}],
         [
             {
-                "code": "sz000001",
-                "name": "平安银行",
-                "price": 11.23,
-                "pre_close": 11.05,
-                "pct": 1.63,
+                "exchange": "sz",
+                "code": "000001",
+                "last_price": 11.23,
+                "pre_close_price": 11.05,
             }
         ],
     ]
@@ -41,7 +40,9 @@ def test_realtime_requests_codes_before_full_market_quotes(client: tuple[TestCli
 
     assert response.status_code == 200
     assert response.json()["data"][0]["symbol"] == "000001.SZ"
-    assert gateway.call.await_args_list[0].args == ("codes.all_stocks", {})
+    assert response.json()["data"][0]["name"] == "平安银行"
+    assert response.json()["data"][0]["change_pct"] is not None
+    assert gateway.call.await_args_list[0].args == ("codes.latest_stock_list", {})
     assert gateway.call.await_args_list[1].args == (
         "helpers.full_quotes",
         {"codes": ["sz000001"]},

@@ -16,13 +16,17 @@ def to_tdx_code(symbol: str) -> str:
     return f"{prefix}{code}"
 
 
-def from_tdx_code(value: Any) -> str | None:
+def from_tdx_code(value: Any, market: Any = None) -> str | None:
     if not isinstance(value, str):
         return None
     raw = value.lower()
-    for prefix, market in (("sz", "SZ"), ("sh", "SH"), ("bj", "BJ")):
+    for prefix, suffix in (("sz", "SZ"), ("sh", "SH"), ("bj", "BJ")):
         if raw.startswith(prefix) and raw[len(prefix):].isdigit():
-            return f"{raw[len(prefix):].zfill(6)}.{market}"
+            return f"{raw[len(prefix):].zfill(6)}.{suffix}"
+    if raw.isdigit() and isinstance(market, str):
+        suffix = {"sz": "SZ", "sh": "SH", "bj": "BJ"}.get(market.lower())
+        if suffix is not None:
+            return f"{raw.zfill(6)}.{suffix}"
     return value if "." in value else None
 
 
@@ -38,9 +42,12 @@ def number(row: dict[str, Any], *names: str) -> float | int | None:
 
 
 def normalize_realtime(row: dict[str, Any]) -> dict[str, Any] | None:
-    symbol = from_tdx_code(row.get("symbol") or row.get("code") or row.get("ts_code"))
+    symbol = from_tdx_code(
+        row.get("symbol") or row.get("code") or row.get("ts_code"),
+        row.get("exchange") or row.get("market"),
+    )
     last = number(row, "last_price", "price", "last", "close")
-    prev = number(row, "prev_close", "pre_close", "yesterday_close")
+    prev = number(row, "prev_close", "pre_close", "pre_close_price", "yesterday_close")
     if symbol is None or last is None or prev is None:
         return None
     result: dict[str, Any] = {
@@ -51,16 +58,24 @@ def normalize_realtime(row: dict[str, Any]) -> dict[str, Any] | None:
         "open": number(row, "open", "open_price"),
         "high": number(row, "high", "high_price"),
         "low": number(row, "low", "low_price"),
-        "volume": number(row, "volume", "vol"),
+        "volume": number(row, "volume", "vol", "total_hand"),
         "amount": number(row, "amount", "amt", "turnover"),
     }
     pct = number(row, "change_pct", "pct", "percent")
+    if pct is None and prev:
+        pct = (last - prev) / prev * 100
     result["change_pct"] = pct / 100 if pct is not None and abs(pct) > 1 else pct
     return result
 
 
 def normalize_bar(row: dict[str, Any], fallback_symbol: str) -> dict[str, Any] | None:
-    symbol = from_tdx_code(row.get("symbol") or row.get("code") or row.get("ts_code")) or fallback_symbol
+    symbol = (
+        from_tdx_code(
+            row.get("symbol") or row.get("code") or row.get("ts_code"),
+            row.get("exchange") or row.get("market"),
+        )
+        or fallback_symbol
+    )
     timestamp = row.get("datetime") or row.get("date") or row.get("time")
     if timestamp is None:
         return None
@@ -78,7 +93,7 @@ def normalize_bar(row: dict[str, Any], fallback_symbol: str) -> dict[str, Any] |
         "high": number(row, "high"),
         "low": number(row, "low"),
         "close": number(row, "close", "last"),
-        "volume": number(row, "volume", "vol"),
+        "volume": number(row, "volume", "vol", "volume_lots", "volume_wire_value"),
         "amount": number(row, "amount", "amt", "turnover"),
     }
 

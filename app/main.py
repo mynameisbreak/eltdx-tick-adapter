@@ -37,19 +37,36 @@ async def health() -> dict[str, str]:
 async def realtime(symbols: str | None = Query(default=None)) -> dict[str, list[dict[str, Any]]]:
     del symbols  # The custom-source contract requires a full-market snapshot.
     try:
-        codes = await gateway.call("codes.all_stocks", {})
-        full_codes = [
-            row.get("full_code") or row.get("code")
-            for row in result_rows(codes)
-            if row.get("full_code") or row.get("code")
-        ]
-        if isinstance(codes, list):
-            full_codes.extend(code for code in codes if isinstance(code, str))
+        listed = await gateway.call("codes.latest_stock_list", {})
+        name_by_code: dict[str, str] = {}
+        full_codes: list[str] = []
+        for row in result_rows(listed):
+            code = row.get("code")
+            market = row.get("exchange") or row.get("market")
+            if isinstance(code, str) and code.isdigit() and isinstance(market, str):
+                full = f"{market.lower()}{code}"
+            else:
+                full = row.get("full_code") or code
+            if not full:
+                continue
+            full_codes.append(full)
+            name = row.get("name")
+            if isinstance(name, str) and name:
+                name_by_code[full.lower()] = name
+        if isinstance(listed, list):
+            full_codes.extend(code for code in listed if isinstance(code, str))
         full_codes = list(dict.fromkeys(full_codes))
         result = await gateway.call("helpers.full_quotes", {"codes": full_codes})
     except AdapterError as exc:
         raise gateway_error(exc) from exc
-    data = [normalized for row in result_rows(result) if (normalized := normalize_realtime(row))]
+    data: list[dict[str, Any]] = []
+    for row in result_rows(result):
+        normalized = normalize_realtime(row)
+        if normalized is None:
+            continue
+        if not normalized.get("name"):
+            normalized["name"] = name_by_code.get(to_tdx_code(normalized["symbol"]))
+        data.append(normalized)
     return {"data": data}
 
 

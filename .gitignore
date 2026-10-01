@@ -4,3 +4,8 @@ __pycache__/
 .pytest_cache/
 .venv/
 .env
+
+# 本地运行产生的备份文件，不应进版本库
+*.bak
+*.bak.*
+tick-stock-panel.yaml
