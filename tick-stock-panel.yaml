@@ -64,3 +64,18 @@ datasets:
       close: close
       volume: volume
       amount: amount
+
+  adj_factor:
+    url: http://127.0.0.1:3021/adj_factor
+    method: POST
+    batch: 75
+    rpm: 30
+    timeout: 60
+    response_path: data
+    symbols_param: symbols
+    start_param: start_time
+    end_param: end_time
+    field_map:
+      symbol: symbol
+      trade_date: trade_date
+      ex_factor: ex_factor

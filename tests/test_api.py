@@ -48,6 +48,35 @@ def test_realtime_requests_codes_before_full_market_quotes(client: tuple[TestCli
     )
 
 
+def test_adj_factor_maps_qfq_scale_to_panel_contract(client: tuple[TestClient, AsyncMock]) -> None:
+    test_client, gateway = client
+    gateway.call.return_value = {
+        "items": [
+            {
+                "date": "2026-09-30",
+                "qfq_scale": 1.25,
+                "qfq_offset": 0.0,
+            }
+        ]
+    }
+
+    response = test_client.post(
+        "/adj_factor",
+        json={"symbols": ["000001.SZ"], "start_time": "2020-01-01T00:00:00+08:00"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "data": [
+            {"symbol": "000001.SZ", "trade_date": "2026-09-30", "ex_factor": 1.25}
+        ]
+    }
+    gateway.call.assert_awaited_once_with(
+        "corporate.adjustment_factors",
+        {"code": "sz000001", "start_date": "2020-01-01"},
+    )
+
+
 def test_minute_maps_request_and_response(client: tuple[TestClient, AsyncMock]) -> None:
     test_client, gateway = client
     gateway.call.return_value = [

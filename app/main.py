@@ -7,8 +7,14 @@ from typing import Any
 from fastapi import FastAPI, HTTPException, Query
 
 from .eltdx_client import EltdxGateway, result_rows
-from .models import AdapterError, BarsRequest
-from .normalizers import count_for_period, normalize_bar, normalize_realtime, to_tdx_code
+from .models import AdjFactorRequest, AdapterError, BarsRequest
+from .normalizers import (
+    count_for_period,
+    normalize_adj_factor,
+    normalize_bar,
+    normalize_realtime,
+    to_tdx_code,
+)
 
 
 GATEWAY_URL = os.getenv("ELTDX_GATEWAY_URL", "http://127.0.0.1:8000")
@@ -70,6 +76,31 @@ async def bars(request: BarsRequest) -> dict[str, list[dict[str, Any]]]:
             normalized
             for row in result_rows(result)
             if (normalized := normalize_bar(row, symbol))
+        )
+    return {"data": data}
+
+
+@app.post("/adj_factor")
+async def adj_factor(request: AdjFactorRequest) -> dict[str, list[dict[str, Any]]]:
+    data: list[dict[str, Any]] = []
+    start_date = request.start_time.date().isoformat() if request.start_time else None
+    for symbol in request.symbols:
+        try:
+            result = await gateway.call(
+                "corporate.adjustment_factors",
+                {
+                    "code": to_tdx_code(symbol),
+                    **({"start_date": start_date} if start_date else {}),
+                },
+            )
+        except (AdapterError, ValueError) as exc:
+            if isinstance(exc, AdapterError):
+                raise gateway_error(exc) from exc
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        data.extend(
+            normalized
+            for row in result_rows(result)
+            if (normalized := normalize_adj_factor(row, symbol))
         )
     return {"data": data}
 

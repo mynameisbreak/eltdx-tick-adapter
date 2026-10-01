@@ -59,6 +59,20 @@ def normalize_realtime(row: dict[str, Any]) -> dict[str, Any] | None:
     return result
 
 
+def normalize_adj_factor(row: dict[str, Any], symbol: str) -> dict[str, Any] | None:
+    trade_date = row.get("date") or row.get("trade_date")
+    ex_factor = number(row, "qfq_scale", "ex_factor")
+    if trade_date is None or ex_factor is None:
+        return None
+    if isinstance(trade_date, datetime):
+        trade_date = trade_date.date()
+    return {
+        "symbol": symbol,
+        "trade_date": str(trade_date),
+        "ex_factor": ex_factor,
+    }
+
+
 def normalize_bar(row: dict[str, Any], fallback_symbol: str) -> dict[str, Any] | None:
     symbol = from_tdx_code(row.get("symbol") or row.get("code") or row.get("ts_code")) or fallback_symbol
     timestamp = row.get("datetime") or row.get("date") or row.get("time")

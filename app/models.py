@@ -20,6 +20,12 @@ class BarsRequest(BaseModel):
         return value
 
 
+class AdjFactorRequest(BaseModel):
+    symbols: list[str] = Field(min_length=1, max_length=100)
+    start_time: datetime | None = None
+    end_time: datetime | None = None
+
+
 class RpcRequest(BaseModel):
     id: int | str
     ok: bool
