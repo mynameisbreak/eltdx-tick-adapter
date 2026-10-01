@@ -22,23 +22,30 @@ def test_health(client: tuple[TestClient, AsyncMock]) -> None:
     assert response.json()["status"] == "ok"
 
 
-def test_realtime_normalizes_full_market_response(client: tuple[TestClient, AsyncMock]) -> None:
+def test_realtime_requests_codes_before_full_market_quotes(client: tuple[TestClient, AsyncMock]) -> None:
     test_client, gateway = client
-    gateway.call.return_value = [
-        {
-            "code": "sz000001",
-            "name": "平安银行",
-            "price": 11.23,
-            "pre_close": 11.05,
-            "pct": 1.63,
-        }
+    gateway.call.side_effect = [
+        ["sz000001"],
+        [
+            {
+                "code": "sz000001",
+                "name": "平安银行",
+                "price": 11.23,
+                "pre_close": 11.05,
+                "pct": 1.63,
+            }
+        ],
     ]
 
     response = test_client.get("/realtime", params={"symbols": "000001.SZ"})
 
     assert response.status_code == 200
     assert response.json()["data"][0]["symbol"] == "000001.SZ"
-    gateway.call.assert_awaited_once_with("helpers.full_quotes", {})
+    assert gateway.call.await_args_list[0].args == ("codes.all_stocks", {})
+    assert gateway.call.await_args_list[1].args == (
+        "helpers.full_quotes",
+        {"codes": ["sz000001"]},
+    )
 
 
 def test_minute_maps_request_and_response(client: tuple[TestClient, AsyncMock]) -> None:

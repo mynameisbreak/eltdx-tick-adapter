@@ -37,7 +37,16 @@ async def health() -> dict[str, str]:
 async def realtime(symbols: str | None = Query(default=None)) -> dict[str, list[dict[str, Any]]]:
     del symbols  # The custom-source contract requires a full-market snapshot.
     try:
-        result = await gateway.call("helpers.full_quotes", {})
+        codes = await gateway.call("codes.all_stocks", {})
+        full_codes = [
+            row.get("full_code") or row.get("code")
+            for row in result_rows(codes)
+            if row.get("full_code") or row.get("code")
+        ]
+        if isinstance(codes, list):
+            full_codes.extend(code for code in codes if isinstance(code, str))
+        full_codes = list(dict.fromkeys(full_codes))
+        result = await gateway.call("helpers.full_quotes", {"codes": full_codes})
     except AdapterError as exc:
         raise gateway_error(exc) from exc
     data = [normalized for row in result_rows(result) if (normalized := normalize_realtime(row))]
