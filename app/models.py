@@ -26,6 +26,17 @@ class AdjFactorRequest(BaseModel):
     end_time: datetime | None = None
 
 
+class FinancialRequest(BaseModel):
+    symbols: list[str] = Field(min_length=1, max_length=100)
+    report_type: str = Field(default="zcfzb", min_length=1, max_length=32)
+
+
+class DailyRequest(BaseModel):
+    symbols: list[str] = Field(min_length=1, max_length=100)
+    start_time: datetime | None = None
+    end_time: datetime | None = None
+
+
 class RpcRequest(BaseModel):
     id: int | str
     ok: bool

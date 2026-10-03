@@ -24,7 +24,8 @@ def test_realtime_normalization() -> None:
             "pre_close": 11.05,
             "pct": 1.63,
             "vol": 100,
-        }
+        },
+        pct_unit="percent",
     )
     assert result is not None
     assert result["symbol"] == "000001.SZ"

@@ -4,6 +4,26 @@ auth:
   type: none
 
 datasets:
+  daily:
+    url: http://127.0.0.1:3021/daily
+    method: POST
+    batch: 50
+    rpm: 30
+    timeout: 60
+    response_path: data
+    symbols_param: symbols
+    start_param: start_time
+    end_param: end_time
+    field_map:
+      symbol: symbol
+      date: date
+      open: open
+      high: high
+      low: low
+      close: close
+      volume: volume
+      amount: amount
+
   realtime:
     url: http://127.0.0.1:3021/realtime
     method: GET
@@ -64,6 +84,18 @@ datasets:
       close: close
       volume: volume
       amount: amount
+
+  financial:
+    url: http://127.0.0.1:3021/financial
+    method: POST
+    batch: 20
+    rpm: 30
+    timeout: 60
+    response_path: data
+    symbols_param: symbols
+    table_param: report_type
+    field_map:
+      symbol: symbol
 
   adj_factor:
     url: http://127.0.0.1:3021/adj_factor
