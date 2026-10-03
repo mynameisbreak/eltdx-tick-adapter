@@ -90,7 +90,7 @@ def normalize_daily(row: dict[str, Any], fallback_symbol: str) -> dict[str, Any]
         )
         or fallback_symbol
     )
-    date_value = row.get("date") or row.get("trade_date") or row.get("datetime")
+    date_value = row.get("date") or row.get("trade_date") or row.get("datetime") or row.get("time")
     if date_value is None:
         return None
     if isinstance(date_value, datetime):
@@ -104,7 +104,7 @@ def normalize_daily(row: dict[str, Any], fallback_symbol: str) -> dict[str, Any]
         "high": number(row, "high"),
         "low": number(row, "low"),
         "close": number(row, "close", "last"),
-        "volume": number(row, "volume", "vol", "total_hand"),
+        "volume": number(row, "volume", "vol", "total_hand", "volume_lots", "volume_wire_value"),
         "amount": number(row, "amount", "amt", "turnover"),
     }
 
@@ -166,7 +166,8 @@ def count_for_period(period: str, start: datetime | None, end: datetime | None) 
 
 
 def count_for_daily(start: datetime | None, end: datetime | None) -> int:
+    # 上游 bars.get 单次 page size 上限为 800，超出会直接被拒绝。
     if start is None or end is None or end <= start:
-        return 5000
+        return 800
     days = max(1, (end.date() - start.date()).days + 1)
-    return min(5000, max(30, days * 2))
+    return min(800, max(30, days * 2))

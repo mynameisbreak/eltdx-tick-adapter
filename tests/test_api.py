@@ -97,7 +97,7 @@ def test_daily_maps_day_bars_to_daily_contract(client: tuple[TestClient, AsyncMo
     }
     assert gateway.call.await_args.args == (
         "bars.get",
-        {"code": "sz000001", "period": "day", "count": 5000, "adjust": "none"},
+        {"code": "sz000001", "period": "day", "count": 800, "adjust": "none"},
     )
 
 
