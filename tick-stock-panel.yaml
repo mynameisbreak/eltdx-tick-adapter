@@ -5,7 +5,7 @@ auth:
 
 datasets:
   realtime:
-    url: http://127.0.0.1:3021/realtime
+    url: http://host.docker.internal:3021/realtime
     method: GET
     rpm: 60
     timeout: 30
@@ -24,7 +24,7 @@ datasets:
       change_pct: change_pct
 
   minute:
-    url: http://127.0.0.1:3021/minute
+    url: http://host.docker.internal:3021/minute
     method: POST
     batch: 20
     rpm: 60
@@ -45,7 +45,7 @@ datasets:
       amount: amount
 
   full_minute:
-    url: http://127.0.0.1:3021/full_minute
+    url: http://host.docker.internal:3021/full_minute
     method: POST
     batch: 100
     rpm: 30
@@ -64,3 +64,4 @@ datasets:
       close: close
       volume: volume
       amount: amount
+
