@@ -27,8 +27,10 @@ def from_tdx_code(value: Any, market: Any = None) -> str | None:
         suffix = {"sz": "SZ", "sh": "SH", "bj": "BJ"}.get(market.lower())
         if suffix is not None:
             return f"{raw.zfill(6)}.{suffix}"
+    if value.isdigit() and len(value) == 6:
+        suffix = "SH" if value.startswith(("5", "6", "9")) else "BJ" if value.startswith(("4", "8")) else "SZ"
+        return f"{value}.{suffix}"
     return value if "." in value else None
-
 
 def number(row: dict[str, Any], *names: str) -> float | int | None:
     for name in names:
@@ -43,11 +45,11 @@ def number(row: dict[str, Any], *names: str) -> float | int | None:
 
 def normalize_realtime(row: dict[str, Any], *, pct_unit: str = "decimal") -> dict[str, Any] | None:
     symbol = from_tdx_code(
-        row.get("symbol") or row.get("code") or row.get("ts_code"),
+        row.get("symbol") or row.get("code") or row.get("ts_code") or row.get("thscode"),
         row.get("exchange") or row.get("market"),
     )
     last = number(row, "last_price", "price", "last", "close")
-    prev = number(row, "prev_close", "pre_close", "pre_close_price", "yesterday_close")
+    prev = number(row, "prev_close", "prevClose", "prev_price", "pre_close", "pre_close_price", "yesterday_close")
     if symbol is None or last is None or prev is None:
         return None
     result: dict[str, Any] = {
@@ -64,7 +66,7 @@ def normalize_realtime(row: dict[str, Any], *, pct_unit: str = "decimal") -> dic
         "amplitude": number(row, "amplitude"),
         "turnover_rate": number(row, "turnover_rate", "turnover_pct"),
     }
-    pct = number(row, "change_pct")
+    pct = number(row, "change_pct", "price_change_ratio_pct", "changePercent")
     if pct is None:
         pct = number(row, "pct", "percent")
         if pct_unit == "percent" and pct is not None:
@@ -90,20 +92,22 @@ def normalize_daily(row: dict[str, Any], fallback_symbol: str) -> dict[str, Any]
         )
         or fallback_symbol
     )
-    date_value = row.get("date") or row.get("trade_date") or row.get("datetime") or row.get("time")
+    date_value = row.get("date") or row.get("trade_date") or row.get("datetime") or row.get("time") or row.get("date_ms")
     if date_value is None:
         return None
-    if isinstance(date_value, datetime):
+    if isinstance(date_value, (int, float)):
+        date = datetime.fromtimestamp(date_value / 1000, tz=ZoneInfo("Asia/Shanghai")).date().isoformat()
+    elif isinstance(date_value, datetime):
         date = date_value.date().isoformat()
     else:
         date = str(date_value).replace("T", " ").split(" ", 1)[0]
     return {
         "symbol": symbol,
         "date": date,
-        "open": number(row, "open"),
-        "high": number(row, "high"),
-        "low": number(row, "low"),
-        "close": number(row, "close", "last"),
+        "open": number(row, "open", "open_price"),
+        "high": number(row, "high", "high_price"),
+        "low": number(row, "low", "low_price"),
+        "close": number(row, "close", "close_price", "last"),
         "volume": number(row, "volume", "vol", "total_hand", "volume_lots", "volume_wire_value"),
         "amount": number(row, "amount", "amt", "turnover"),
     }
@@ -188,8 +192,8 @@ def normalize_depth5(row: dict[str, Any], fallback_symbol: str) -> dict[str, Any
         return None
     return {
         "symbol": symbol,
-        "asks": levels(row.get("sell_levels") or row.get("asks")),
-        "bids": levels(row.get("buy_levels") or row.get("bids")),
+        "asks": levels(row.get("sell_levels") or row.get("asks") or row.get("ask")),
+        "bids": levels(row.get("buy_levels") or row.get("bids") or row.get("bid")),
     }
 
 

@@ -6,9 +6,9 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=break
-WorkingDirectory=/opt/eltdx-tick-adapter
+WorkingDirectory=/opt/market-data-tick-adapter
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/opt/eltdx-tick-adapter/.venv/bin/eltdx-http --host 127.0.0.1 --port 8000
+ExecStart=/opt/market-data-tick-adapter/.venv/bin/eltdx-http --host 127.0.0.1 --port 8000
 Restart=on-failure
 RestartSec=5
 

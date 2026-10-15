@@ -1,5 +1,5 @@
-name: eltdx_source
-display_name: "eltdx 通达信行情"
+name: market_data_source
+display_name: "综合行情数据"
 auth:
   type: none
 

@@ -1,3 +1,4 @@
+from dataclasses import replace
 from unittest.mock import AsyncMock
 
 import pytest
@@ -5,11 +6,20 @@ from fastapi.testclient import TestClient
 
 from app import main
 from app.models import AdapterError
+from app.providers import ProviderUnavailable
 
 
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch) -> tuple[TestClient, AsyncMock]:
     gateway = AsyncMock()
+    settings = replace(
+        main.SETTINGS,
+        stock_sdk_enabled=False,
+        realtime_sources=tuple(source for source in main.SETTINGS.realtime_sources if source != "stock_sdk"),
+    )
+    monkeypatch.setattr(main, "SETTINGS", settings)
+    monkeypatch.delenv(settings.fuyao_api_key_env, raising=False)
+    monkeypatch.setattr(main, "realtime_source", None)
     monkeypatch.setattr(main, "gateway", gateway)
     with TestClient(main.app) as test_client:
         yield test_client, gateway
@@ -20,6 +30,34 @@ def test_health(client: tuple[TestClient, AsyncMock]) -> None:
     response = test_client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+def test_realtime_prefers_fuyao_when_key_is_configured(
+    client: tuple[TestClient, AsyncMock], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    test_client, gateway = client
+    fuyao = AsyncMock()
+    fuyao.snapshot.return_value = [
+        {
+            "thscode": "000001.SZ",
+            "last_price": 11.23,
+            "prev_price": 11.05,
+            "price_change_ratio_pct": 1.63,
+            "volume": 100,
+            "turnover": 1123,
+        }
+    ]
+    gateway.call.return_value = [{"exchange": "sz", "code": "000001", "name": "平安银行"}]
+    monkeypatch.setattr(main, "fuyao", fuyao)
+    monkeypatch.setattr(main, "realtime_source", None)
+    monkeypatch.setenv("HITHINK_FINANCE_API_KEY", "test-key")
+
+    response = test_client.get("/realtime")
+
+    assert response.status_code == 200
+    assert response.json()["data"][0]["name"] == "平安银行"
+    assert response.json()["data"][0]["change_pct"] == pytest.approx(0.0163)
+    fuyao.snapshot.assert_awaited_once_with()
+    assert gateway.call.await_args.args == ("codes.latest_stock_list", {})
+
 
 
 def test_realtime_requests_latest_codes_and_normalizes_quote(client: tuple[TestClient, AsyncMock]) -> None:
@@ -278,3 +316,121 @@ def test_depth5_maps_gateway_levels_to_panel_contract(client: tuple[TestClient, 
     gateway.call.assert_awaited_once_with(
         "quotes.get_depth", {"codes": ["sz000001"]}
     )
+
+def test_realtime_uses_stock_sdk_without_fuyao_key(
+    client: tuple[TestClient, AsyncMock], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    test_client, gateway = client
+    settings = replace(main.SETTINGS, stock_sdk_enabled=True, realtime_sources=("stock_sdk", "eltdx"))
+    stock_sdk = AsyncMock()
+    stock_sdk.quotes.return_value = [{
+        "code": "000001",
+        "name": "平安银行",
+        "price": 11.41,
+        "prevClose": 11.50,
+        "change": -0.09,
+        "changePercent": -0.78,
+        "volume": 100,
+        "amount": 100,
+    }]
+    gateway.call.return_value = [{"exchange": "sz", "code": "000001", "name": "平安银行"}]
+    monkeypatch.setattr(main, "SETTINGS", settings)
+    monkeypatch.setattr(main, "stock_sdk", stock_sdk)
+
+    response = test_client.get("/realtime")
+
+    assert response.status_code == 200
+    quote = response.json()["data"][0]
+    assert quote["symbol"] == "000001.SZ"
+    assert quote["change_pct"] == pytest.approx(-0.0078)
+    stock_sdk.quotes.assert_awaited_once_with(["sz000001"])
+
+
+def test_daily_uses_stock_sdk_when_fuyao_is_not_selected(
+    client: tuple[TestClient, AsyncMock], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    test_client, _ = client
+    settings = replace(main.SETTINGS, stock_sdk_enabled=True)
+    stock_sdk = AsyncMock()
+    stock_sdk.daily.return_value = [{
+        "date": "2026-09-30",
+        "open": 10,
+        "high": 12,
+        "low": 9,
+        "close": 11,
+        "volume": 100,
+        "amount": 1100,
+    }]
+    monkeypatch.setattr(main, "SETTINGS", settings)
+    monkeypatch.setattr(main, "stock_sdk", stock_sdk)
+
+    response = test_client.post("/daily", json={
+        "symbols": ["000001.SZ"],
+        "start_time": "2026-09-30T00:00:00+08:00",
+        "end_time": "2026-09-30T23:59:59+08:00",
+    })
+
+    assert response.status_code == 200
+    assert response.json()["data"][0]["close"] == 11
+    stock_sdk.daily.assert_awaited_once_with("000001.SZ", "20260930", "20260930")
+
+
+def test_depth5_uses_stock_sdk_quotes(
+    client: tuple[TestClient, AsyncMock], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    test_client, _ = client
+    settings = replace(main.SETTINGS, stock_sdk_enabled=True)
+    stock_sdk = AsyncMock()
+    stock_sdk.quotes.return_value = [{
+        "bid": [{"price": 11.4, "volume": 10}],
+        "ask": [{"price": 11.41, "volume": 20}],
+    }]
+    monkeypatch.setattr(main, "SETTINGS", settings)
+    monkeypatch.setattr(main, "stock_sdk", stock_sdk)
+
+    response = test_client.post("/depth5", json={"symbols": ["000001.SZ"]})
+
+    assert response.status_code == 200
+    assert response.json()["data"][0]["bids"] == [[11.4, 10.0]]
+    stock_sdk.quotes.assert_awaited_once_with(["sz000001"])
+
+def test_financial_uses_fuyao_and_preserves_fields(
+    client: tuple[TestClient, AsyncMock], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    test_client, gateway = client
+    fuyao = AsyncMock()
+    fuyao.financial.return_value = [{"period_end_ms": 1735574400000, "net_profit": 930}]
+    monkeypatch.setattr(main, "fuyao", fuyao)
+    monkeypatch.setenv("HITHINK_FINANCE_API_KEY", "test-only")
+
+    response = test_client.post("/financial", json={"symbols": ["600519.SH"], "report_type": "lrb"})
+
+    assert response.status_code == 200
+    assert response.json()["data"] == [{"symbol": "600519.SH", "period_end_ms": 1735574400000, "net_profit": 930}]
+    fuyao.financial.assert_awaited_once_with("600519.SH", "lrb")
+    gateway.call.assert_not_awaited()
+
+
+def test_financial_unknown_type_falls_back_to_eltdx(client: tuple[TestClient, AsyncMock]) -> None:
+    test_client, gateway = client
+    gateway.call.return_value = [{"period": "2025", "value": 1}]
+
+    response = test_client.post("/financial", json={"symbols": ["600519.SH"], "report_type": "custom"})
+
+    assert response.status_code == 200
+    gateway.call.assert_awaited_once_with("f10.finance_report", {"code": "sh600519", "report_type": "custom"})
+
+def test_financial_provider_and_fallback_errors_return_bad_gateway(
+    client: tuple[TestClient, AsyncMock], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    test_client, gateway = client
+    fuyao = AsyncMock()
+    fuyao.financial.side_effect = ProviderUnavailable("fuyao unavailable")
+    gateway.call.side_effect = AdapterError("eltdx unavailable")
+    monkeypatch.setattr(main, "fuyao", fuyao)
+    monkeypatch.setenv("HITHINK_FINANCE_API_KEY", "test-only")
+
+    response = test_client.post("/financial", json={"symbols": ["600519.SH"], "report_type": "lrb"})
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == "eltdx unavailable"

@@ -35,4 +35,8 @@ def result_rows(result: Any) -> list[dict[str, Any]]:
             value = result.get(key)
             if isinstance(value, list):
                 return [row for row in value if isinstance(row, dict)]
+            if isinstance(value, dict):
+                nested = value.get("item")
+                if isinstance(nested, list):
+                    return [row for row in nested if isinstance(row, dict)]
     return []

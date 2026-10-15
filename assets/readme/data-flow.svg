@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="350" viewBox="0 0 1200 350" role="img" aria-labelledby="title desc">
-  <title id="title">eltdx-tick-adapter market data flow</title>
+  <title id="title">market-data-tick-adapter market data flow</title>
   <desc id="desc">Tick Stock Panel sends requests through the adapter on port 3021 to the ELTDX gateway on port 8000. The adapter returns normalized JSON for market data endpoints.</desc>
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto-start-reverse">
@@ -20,7 +20,7 @@
 
   <rect x="438" y="76" width="324" height="156" rx="10" fill="#fff" stroke="#087b56" stroke-width="3" />
   <rect x="438" y="76" width="324" height="8" rx="4" fill="#087b56" />
-  <text x="466" y="124" fill="#17211e" font-family="Segoe UI, sans-serif" font-size="29" font-weight="700">eltdx-tick-adapter</text>
+  <text x="466" y="124" fill="#17211e" font-family="Segoe UI, sans-serif" font-size="29" font-weight="700">market-data-tick-adapter</text>
   <text x="466" y="159" fill="#087b56" font-family="ui-monospace, monospace" font-size="20">FastAPI · :3021</text>
   <text x="466" y="192" fill="#53625b" font-family="ui-monospace, monospace" font-size="18">normalize → { data: [...] }</text>
 
