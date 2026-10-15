@@ -1,219 +1,152 @@
 # eltdx-tick-adapter
 
-将本地 eltdx 网关行情转换为 Tick Stock Panel 自定义数据源接口的 FastAPI 适配器。
+eltdx 通达信行情适配器：把 [eltdx](https://github.com/electkismet/eltdx) 的行情能力通过 HTTP 暴露给 [Tick Stock Panel](https://github.com/shy3130/tick-stock-panel) 的自定义数据源契约。
 
-## 功能概览
+# eltdx-tick-adapter (English)
 
-适配器通过本机 eltdx 网关提供以下数据：
+An adapter that exposes [eltdx](https://github.com/electkismet/eltdx) market-data capabilities over HTTP for the custom data-source contract of [Tick Stock Panel](https://github.com/shy3130/tick-stock-panel).
 
-| 数据集 | HTTP 接口 | 方法 | 说明 |
+---
+
+## 中文
+
+### 数据集与端点
+
+| 数据集 | 端点 | 方法 | 说明 |
 | --- | --- | --- | --- |
-| 日线 | `/daily` | POST | 不复权日线数据 |
-| 复权因子 | `/adj_factor` | POST | 复权因子历史数据 |
-| 实时行情 | `/realtime` | GET | 全市场实时快照 |
-| 分钟线 | `/minute` | POST | 指定周期分钟线 |
-| 全量分钟线 | `/full_minute` | POST | 与分钟线相同的完整历史接口 |
-| 财务数据 | `/financial` | POST | 按报表类型查询财务数据 |
-| 五挡盘口 | `/depth5` | POST | 直接返回买卖各 5 档盘口 |
+| realtime | `/realtime` | GET | 全市场快照（含名称、涨跌幅） |
+| minute | `/minute` | POST | 分钟 K（1m/5m/15m/30m/60m） |
+| full_minute | `/full_minute` | POST | 全量分钟（与 minute 同形） |
+| daily | `/daily` | POST | 日 K |
+| adj_factor | `/adj_factor` | POST | 除权因子 |
+| financial | `/financial` | POST | 财务数据（按表名透传） |
+| depth5 | `/depth5` | POST | 五挡盘口（asks/bids 各 5 档） |
+| health | `/health` | GET | 健康检查 |
 
-`/depth5` 是适配器的内部接口。Tick Stock Panel v0.3.2 的自定义数据源配置模型尚未接受 `depth5` 数据集，因此面板端应将「五挡盘口」能力路由到内置的 `tdxquant` provider；其余数据集可以继续使用 `eltdx_source`。
+所有业务端点返回 `{"data": [...]}`，直接对应面板自定义数据源的 `response_path: data`。
 
-## 架构
+### 部署
 
-```text
-Tick Stock Panel
-        │
-        │ HTTP（容器通过 host.docker.internal 访问）
-        ▼
- eltdx-tick-adapter :3021
-        │
-        │ JSON-RPC
-        ▼
-     eltdx-gateway :8001
-        │
-        ▼
-   通达信 7709 服务
-```
-
-默认安全边界如下：
-
-- 适配器监听 `127.0.0.1:3021`；Docker 场景通过宿主机网关地址访问。
-- eltdx 网关监听 `127.0.0.1:8001`。
-- 不需要将任何服务暴露到公网。
-
-## 环境要求
-
-- Python `>=3.10`
-- 可用的 eltdx 网关，默认地址为 `http://127.0.0.1:8000`
-- 网关能够正常访问通达信 7709 行情服务
-
-## 安装
+依赖：Python ≥ 3.10、运行中的 eltdx HTTP 网关（默认 `http://127.0.0.1:8001`）。
 
 ```bash
-git clone <repository>
-cd eltdx-tick-adapter
-python3 -m venv .venv
-.venv/bin/pip install -e '.[test]'
-```
-
-如使用 `uv`，也可以执行：
-
-```bash
-uv sync --extra test
-```
-
-## 本地运行
-
-```bash
-export ELTDX_GATEWAY_URL=http://127.0.0.1:8000
-export HOST=127.0.0.1
-export PORT=3021
-.venv/bin/eltdx-tick-adapter
-```
-
-健康检查：
-
-```bash
-curl -sS http://127.0.0.1:3021/health
-```
-
-## 接口示例
-
-### 日线
-
-```bash
-curl -sS -X POST http://127.0.0.1:3021/daily \
-  -H 'content-type: application/json' \
-  -d '{"symbols":["000001.SZ"]}'
-```
-
-### 分钟线
-
-```bash
-curl -sS -X POST http://127.0.0.1:3021/minute \
-  -H 'content-type: application/json' \
-  -d '{"symbols":["000001.SZ"],"period":"1m"}'
-```
-
-支持的 `period` 为 `1m`、`5m`、`15m`、`30m` 和 `60m`。
-
-### 五挡盘口
-
-```bash
-curl -sS -X POST http://127.0.0.1:3021/depth5 \
-  -H 'content-type: application/json' \
-  -d '{"symbols":["000001.SZ"]}'
-```
-
-响应结构：
-
-```json
-{
-  "data": [
-    {
-      "symbol": "000001.SZ",
-      "asks": [[11.28, 83.0], [11.29, 1029.0]],
-      "bids": [[11.27, 1632.0], [11.26, 8919.0]]
-    }
-  ]
-}
-```
-
-`asks` 和 `bids` 实际最多各包含 5 档，数组元素依次为 `[价格, 数量]`。
-
-### 财务数据
-
-```bash
-curl -sS -X POST http://127.0.0.1:3021/financial \
-  -H 'content-type: application/json' \
-  -d '{"symbols":["000001.SZ"],"report_type":"zcfzb"}'
-```
-
-## Tick Stock Panel 配置
-
-仓库中的 `tick-stock-panel.yaml` 提供 `daily`、`realtime`、`minute`、`full_minute`、`financial` 和 `adj_factor` 六类自定义数据源配置。
-
-容器部署时，将 URL 中的 `127.0.0.1` 替换为：
-
-```text
-http://host.docker.internal:3021
-```
-
-五挡盘口不应在 Tick Stock Panel v0.3.2 的 `eltdx_source` 中声明。请在面板设置中将以下能力路由到 `tdxquant`：
-
-```text
-depth5_data_provider = tdxquant
-```
-
-## systemd 部署
-
-仓库提供 `eltdx-tick-adapter.service` 示例单元文件：
-
-```bash
-sudo cp eltdx-tick-adapter.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now eltdx-tick-adapter
-sudo systemctl status eltdx-tick-adapter
-```
-
-查看日志：
-
-```bash
-sudo journalctl -u eltdx-tick-adapter -f
-```
-
-## 测试
-
-```bash
+cd /opt/eltdx-tick-adapter
+.venv/bin/python -m pip install -e ".[test]"
 .venv/bin/pytest -q
 ```
 
-测试覆盖请求参数、符号转换、行情字段规范化、时间范围过滤、网关错误处理和五挡盘口响应。
-
-## 故障排查
-
-### 网关返回 `7709 runtime command channel is closed`
-
-先检查网关状态和方法调用：
+systemd 服务文件（`eltdx-tick-adapter.service` / `eltdx-gateway.service`）已在仓库内提供：
 
 ```bash
-sudo systemctl is-active eltdx-gateway
-curl -sS -X POST http://127.0.0.1:8001/rpc \
-  -H 'content-type: application/json' \
-  -d '{"id":1,"method":"quotes.get_depth","params":{"codes":["sz000001"]}}'
+sudo systemctl daemon-reload
+sudo systemctl enable --now eltdx-gateway eltdx-tick-adapter
 ```
 
-如果通道仍然断开，查看网关日志和上游行情账号、地址、会话状态：
+关键环境变量：
+
+| 变量 | 默认 | 说明 |
+| --- | --- | --- |
+| `ELTDX_GATEWAY_URL` | `http://127.0.0.1:8000` | 上游网关地址 |
+| `HOST` / `PORT` | `127.0.0.1` / `3021` | 监听地址与端口 |
+
+安全建议：仅监听回环或 Docker 网桥地址（如 `172.17.0.1`），不要暴露公网。
+
+### Docker 容器内访问
+
+面板在容器内通过 `host.docker.internal:3021` 访问本适配器。确保适配器监听在容器可路由的宿主机地址（如 `172.17.0.1`），并在面板 compose 中保留 `extra_hosts: ["host.docker.internal:host-gateway"]`。
+
+### 数据源 YAML 示例（面板侧）
+
+把 `tick-stock-panel.yaml` 复制到面板的 `data/data_sources/eltdx_source.yaml`，并把其中 `127.0.0.1` 全部替换为 `host.docker.internal`，然后在面板「设置 → 数据源」点击重新加载。
+
+---
+
+## English
+
+### Datasets & Endpoints
+
+| Dataset | Endpoint | Method | Description |
+| --- | --- | --- | --- |
+| realtime | `/realtime` | GET | Full-market snapshot (name, change%) |
+| minute | `/minute` | POST | Minute bars (1m/5m/15m/30m/60m) |
+| full_minute | `/full_minute` | POST | Full-market minute bars (same shape) |
+| daily | `/daily` | POST | Daily bars |
+| adj_factor | `/adj_factor` | POST | Adjustment factors |
+| financial | `/financial` | POST | Financial statements (table passthrough) |
+| depth5 | `/depth5` | POST | Five-level order book (asks/bids) |
+| health | `/health` | GET | Health check |
+
+All business endpoints return `{"data": [...]}`, matching the panel custom source `response_path: data`.
+
+### Deployment
+
+Requires Python ≥ 3.10 and a running eltdx HTTP gateway (default `http://127.0.0.1:8001`).
 
 ```bash
-sudo journalctl -u eltdx-gateway -n 50 --no-pager
+cd /opt/eltdx-tick-adapter
+.venv/bin/python -m pip install -e ".[test]"
+.venv/bin/pytest -q
 ```
 
-### `/depth5` 返回 502
-
-这通常表示适配器无法从网关取得盘口数据。先单独验证上述 `quotes.get_depth` RPC，再检查适配器日志：
+systemd units (`eltdx-tick-adapter.service` / `eltdx-gateway.service`) are provided in the repo:
 
 ```bash
-sudo journalctl -u eltdx-tick-adapter -n 50 --no-pager
+sudo systemctl daemon-reload
+sudo systemctl enable --now eltdx-gateway eltdx-tick-adapter
 ```
 
-### 页面仍未显示五挡盘口
+Key environment variables:
 
-确认面板偏好中存在：
+| Variable | Default | Description |
+| --- | --- | --- |
+| `ELTDX_GATEWAY_URL` | `http://127.0.0.1:8000` | Upstream gateway URL |
+| `HOST` / `PORT` | `127.0.0.1` / `3021` | Listen address and port |
 
-```json
-{
-  "depth5_data_provider": "tdxquant"
-}
+Security: bind to loopback or a Docker bridge address (e.g. `172.17.0.1`) only; never expose to the public internet.
+
+### Access from Docker containers
+
+The panel reaches this adapter via `host.docker.internal:3021` inside its container. Make sure the adapter listens on a host address routable from containers (`172.17.0.1` on `docker0`), and keep `extra_hosts: ["host.docker.internal:host-gateway"]` in the panel's compose file.
+
+### Data-source YAML (panel side)
+
+Copy `tick-stock-panel.yaml` to the panel's `data/data_sources/eltdx_source.yaml`, replace every `127.0.0.1` with `host.docker.internal`, then click Reload in Settings → Data sources.
+
+---
+
+## AI 自主部署提示词 / AI Self-Deployment Prompt
+
+把下面这段话连同本仓库一起交给 AI Agent，即可自主完成部署 / Hand this prompt, together with this repository, to an AI agent:
+
+```text
+请在当前服务器部署 eltdx-tick-adapter 并接入 Tick Stock Panel。
+
+前提检查：
+1. 确认 Python >= 3.10 与 eltdx HTTP 网关（默认 127.0.0.1:8001，/health 应返回 ok）。
+2. 确认面板项目目录与 Docker 容器（TickFlow_Stock_Panel，端口 3018）。
+
+部署步骤：
+1. cd 到适配器目录，创建虚拟环境并执行 .venv/bin/python -m pip install -e ".[test]"。
+2. 运行 .venv/bin/pytest -q，必须全部通过；失败则停止并报告。
+3. 检查/创建 systemd 服务：
+   - eltdx-gateway: ExecStart=<venv>/bin/eltdx-http --host 127.0.0.1 --port 8001
+   - eltdx-tick-adapter: Environment=ELTDX_GATEWAY_URL=http://127.0.0.1:8001
+     Environment=HOST=<容器可路由的宿主机地址，如 172.17.0.1> Environment=PORT=3021
+   修改后 sudo systemctl daemon-reload && sudo systemctl restart <服务名>。
+4. 验证：curl http://<HOST>:3021/health 返回 {"status":"ok"}；
+   curl http://127.0.0.1:8001/methods 应包含 quotes.get_depth、helpers.full_quotes、bars.get。
+5. 把 tick-stock-panel.yaml 复制到面板 data/data_sources/eltdx_source.yaml，
+   将其中 127.0.0.1:3021 替换为 host.docker.internal:3021；
+   若宿主机无写入权限，用 sudo 并先做带时间戳的 .bak 备份。
+6. 在面板容器内验证连通：
+   docker exec TickFlow_Stock_Panel python3 -c "import urllib.request;print(urllib.request.urlopen('http://host.docker.internal:3021/health',timeout=10).read().decode())"
+   若 Connection refused，说明适配器监听地址与容器内 host.docker.internal 解析值不一致：
+   用 docker exec <容器> cat /etc/hosts 查看解析值，把适配器 HOST 改成该地址并重启。
+7. 若面板版本的配置解析白名单缺少 full_minute/depth5，报告需升级面板，不要改面板核心代码。
+8. 逐数据集试拉：POST /minute 与 /full_minute（body: symbols/start_time/end_time/period），
+   GET /realtime，确认 data 数组非空；/daily、/adj_factor、/depth5、/financial 用小窗口验证。
+
+安全约束：适配器只监听回环或 Docker 网桥地址，禁止 0.0.0.0 与公网暴露；
+不删除任何已有 YAML/备份；不执行 git reset --hard、git clean、rm -rf；
+不把密码/Token 写入命令或文件；失败时报告命令、完整错误与所在层级，不得伪装成功。
 ```
-
-然后重启面板或通过已登录的设置页重新加载数据源。
-
-## 相关文件
-
-- `app/main.py`：FastAPI 路由与网关调用。
-- `app/eltdx_client.py`：eltdx 网关 JSON-RPC 客户端。
-- `app/normalizers.py`：字段和符号规范化。
-- `tests/`：自动化测试。
-- `tick-stock-panel.yaml`：Tick Stock Panel 自定义数据源配置。
-- `eltdx-tick-adapter.service`：systemd 服务单元示例。
