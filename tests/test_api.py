@@ -246,3 +246,35 @@ def test_gateway_error_returns_bad_gateway(client: tuple[TestClient, AsyncMock])
 
     assert response.status_code == 502
     assert response.json()["detail"] == "upstream unavailable"
+
+def test_depth5_maps_gateway_levels_to_panel_contract(client: tuple[TestClient, AsyncMock]) -> None:
+    test_client, gateway = client
+    gateway.call.return_value = {
+        "records": [{
+            "code": "000001",
+            "exchange": "sz",
+            "last_price": 11.27,
+            "buy_levels": [
+                {"price": 11.26, "volume": 10231},
+                {"price": 11.25, "volume": 14800},
+            ],
+            "sell_levels": [
+                {"price": 11.27, "volume": 1937},
+                {"price": 11.28, "volume": 927},
+            ],
+        }]
+    }
+
+    response = test_client.post("/depth5", json={"symbols": ["000001.SZ"]})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "data": [{
+            "symbol": "000001.SZ",
+            "asks": [[11.27, 1937.0], [11.28, 927.0]],
+            "bids": [[11.26, 10231.0], [11.25, 14800.0]],
+        }]
+    }
+    gateway.call.assert_awaited_once_with(
+        "quotes.get_depth", {"codes": ["sz000001"]}
+    )

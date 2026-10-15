@@ -16,6 +16,7 @@ from .normalizers import (
     normalize_adj_factor,
     normalize_bar,
     normalize_daily,
+    normalize_depth5,
     normalize_realtime,
     to_tdx_code,
 )
@@ -216,6 +217,25 @@ async def financial(request: FinancialRequest) -> dict[str, list[dict[str, Any]]
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         for row in result_rows(result):
             data.append({"symbol": symbol, **row})
+    return {"data": data}
+
+
+@app.post("/depth5")
+async def depth5(request: BarsRequest) -> dict[str, list[dict[str, Any]]]:
+    try:
+        result = await gateway.call(
+            "quotes.get_depth",
+            {"codes": [to_tdx_code(symbol) for symbol in request.symbols]},
+        )
+    except (AdapterError, ValueError) as exc:
+        if isinstance(exc, AdapterError):
+            raise gateway_error(exc) from exc
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    data = [
+        normalized
+        for row, symbol in zip(result_rows(result), request.symbols)
+        if (normalized := normalize_depth5(row, symbol))
+    ]
     return {"data": data}
 
 

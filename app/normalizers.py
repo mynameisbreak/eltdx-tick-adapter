@@ -158,6 +158,41 @@ def normalize_bar(row: dict[str, Any], fallback_symbol: str) -> dict[str, Any] |
     }
 
 
+def normalize_depth5(row: dict[str, Any], fallback_symbol: str) -> dict[str, Any] | None:
+    symbol = (
+        from_tdx_code(
+            row.get("symbol") or row.get("code") or row.get("ts_code"),
+            row.get("exchange") or row.get("market"),
+        )
+        or fallback_symbol
+    )
+
+    def levels(value: Any) -> list[list[float]]:
+        if not isinstance(value, list):
+            return []
+        normalized: list[list[float]] = []
+        for level in value:
+            if isinstance(level, dict):
+                price = number(level, "price", "p")
+                volume = number(level, "volume", "vol", "v")
+            elif isinstance(level, (list, tuple)) and len(level) >= 2:
+                price = number({"value": level[0]}, "value")
+                volume = number({"value": level[1]}, "value")
+            else:
+                continue
+            if price is not None and volume is not None:
+                normalized.append([price, volume])
+        return normalized
+
+    if symbol is None:
+        return None
+    return {
+        "symbol": symbol,
+        "asks": levels(row.get("sell_levels") or row.get("asks")),
+        "bids": levels(row.get("buy_levels") or row.get("bids")),
+    }
+
+
 def count_for_period(period: str, start: datetime | None, end: datetime | None) -> int:
     if start is None or end is None or end <= start:
         return _PERIOD_COUNTS[period]

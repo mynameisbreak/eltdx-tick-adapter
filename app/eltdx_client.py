@@ -31,7 +31,7 @@ def result_rows(result: Any) -> list[dict[str, Any]]:
     if isinstance(result, list):
         return [row for row in result if isinstance(row, dict)]
     if isinstance(result, dict):
-        for key in ("rows", "quotes", "bars", "data", "items"):
+        for key in ("rows", "quotes", "bars", "data", "items", "records"):
             value = result.get(key)
             if isinstance(value, list):
                 return [row for row in value if isinstance(row, dict)]
