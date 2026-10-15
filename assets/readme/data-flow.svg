@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="350" viewBox="0 0 1200 350" role="img" aria-labelledby="title desc">
+  <title id="title">eltdx-tick-adapter market data flow</title>
+  <desc id="desc">Tick Stock Panel sends requests through the adapter on port 3021 to the ELTDX gateway on port 8000. The adapter returns normalized JSON for market data endpoints.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto-start-reverse">
+      <path d="M1 1L8 5L1 9" fill="none" stroke="#73837b" stroke-width="1.5" />
+    </marker>
+  </defs>
+  <rect width="1200" height="350" rx="16" fill="#f4f7f4" />
+  <text x="48" y="48" fill="#53625b" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18">MARKET DATA PIPELINE</text>
+  <text x="1152" y="48" text-anchor="end" fill="#53625b" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18">HTTP · JSON</text>
+
+  <rect x="48" y="88" width="300" height="132" rx="10" fill="#fff" stroke="#cbd5ce" stroke-width="2" />
+  <rect x="48" y="88" width="8" height="132" rx="4" fill="#d09235" />
+  <text x="76" y="133" fill="#17211e" font-family="Segoe UI, sans-serif" font-size="28" font-weight="700">Tick Stock Panel</text>
+  <text x="76" y="171" fill="#53625b" font-family="ui-monospace, monospace" font-size="19">Docker container</text>
+  <text x="76" y="199" fill="#53625b" font-family="ui-monospace, monospace" font-size="18">host.docker.internal</text>
+
+  <path d="M365 154H425" fill="none" stroke="#73837b" stroke-width="2" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+
+  <rect x="438" y="76" width="324" height="156" rx="10" fill="#fff" stroke="#087b56" stroke-width="3" />
+  <rect x="438" y="76" width="324" height="8" rx="4" fill="#087b56" />
+  <text x="466" y="124" fill="#17211e" font-family="Segoe UI, sans-serif" font-size="29" font-weight="700">eltdx-tick-adapter</text>
+  <text x="466" y="159" fill="#087b56" font-family="ui-monospace, monospace" font-size="20">FastAPI · :3021</text>
+  <text x="466" y="192" fill="#53625b" font-family="ui-monospace, monospace" font-size="18">normalize → { data: [...] }</text>
+
+  <path d="M779 154H839" fill="none" stroke="#73837b" stroke-width="2" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+
+  <rect x="852" y="88" width="300" height="132" rx="10" fill="#fff" stroke="#cbd5ce" stroke-width="2" />
+  <rect x="852" y="88" width="8" height="132" rx="4" fill="#d64a3f" />
+  <text x="880" y="133" fill="#17211e" font-family="Segoe UI, sans-serif" font-size="28" font-weight="700">ELTDX gateway</text>
+  <text x="880" y="171" fill="#53625b" font-family="ui-monospace, monospace" font-size="19">HTTP · :8000</text>
+  <text x="880" y="199" fill="#53625b" font-family="ui-monospace, monospace" font-size="18">quotes · bars · finance</text>
+
+  <line x1="48" y1="260" x2="1152" y2="260" stroke="#d7dfda" stroke-width="2" />
+  <text x="48" y="301" fill="#53625b" font-family="ui-monospace, monospace" font-size="17">DATASETS</text>
+  <g font-family="ui-monospace, monospace" font-size="18" fill="#155d45">
+    <rect x="176" y="276" width="142" height="42" rx="6" fill="#e3f1e9" /><text x="247" y="303" text-anchor="middle">realtime</text>
+    <rect x="332" y="276" width="142" height="42" rx="6" fill="#e3f1e9" /><text x="403" y="303" text-anchor="middle">minute</text>
+    <rect x="488" y="276" width="170" height="42" rx="6" fill="#e3f1e9" /><text x="573" y="303" text-anchor="middle">full_minute</text>
+    <rect x="672" y="276" width="124" height="42" rx="6" fill="#e3f1e9" /><text x="734" y="303" text-anchor="middle">daily</text>
+    <rect x="810" y="276" width="170" height="42" rx="6" fill="#e3f1e9" /><text x="895" y="303" text-anchor="middle">adj_factor</text>
+    <rect x="994" y="276" width="158" height="42" rx="6" fill="#e3f1e9" /><text x="1073" y="303" text-anchor="middle">+ 2 datasets</text>
+  </g>
+</svg>
