@@ -19,7 +19,7 @@ timeout = 30
 [routing]
 # Fuyao is preferred for documented coverage; Stock SDK serves uncovered data; ELTDX remains fallback.
 realtime_sources = ["fuyao", "stock_sdk", "eltdx"]
-daily_sources = ["fuyao", "stock_sdk", "eltdx"]
+daily_sources = ["eltdx", "fuyao", "stock_sdk"]
 minute_sources = ["fuyao", "stock_sdk", "eltdx"]
 depth5_sources = ["fuyao", "stock_sdk", "eltdx"]
 # Optional first-request speed probe for realtime data.
