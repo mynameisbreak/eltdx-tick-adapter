@@ -2,25 +2,6 @@
 url = "http://127.0.0.1:8001"
 timeout = 30
 
-[fuyao]
+[akshare]
 enabled = true
-base_url = "https://fuyao.aicubes.cn"
-# File is read first; a non-empty FUYAO_API_KEY_ENV value overrides it.
-api_key_file = ".secrets/fuyao_api_key"
-api_key_env = "HITHINK_FINANCE_API_KEY"
 timeout = 30
-
-[stock_sdk]
-enabled = true
-node = "node"
-bridge = "stock-sdk/bridge.mjs"
-timeout = 30
-
-[routing]
-# Fuyao is preferred for documented coverage; Stock SDK serves uncovered data; ELTDX remains fallback.
-realtime_sources = ["fuyao", "stock_sdk", "eltdx"]
-daily_sources = ["eltdx", "fuyao", "stock_sdk"]
-minute_sources = ["fuyao", "stock_sdk", "eltdx"]
-depth5_sources = ["fuyao", "stock_sdk", "eltdx"]
-# Optional first-request speed probe for realtime data.
-benchmark_on_start = false

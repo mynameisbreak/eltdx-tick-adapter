@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="350" viewBox="0 0 1200 350" role="img" aria-labelledby="title desc">
   <title id="title">market-data-tick-adapter market data flow</title>
-  <desc id="desc">Tick Stock Panel sends requests through the adapter on port 3021 to the ELTDX gateway on port 8000. The adapter returns normalized JSON for market data endpoints.</desc>
+  <desc id="desc">Tick Stock Panel sends requests through the adapter on port 3021 to the ELTDX gateway on port 8001, with AkShare as fallback. The adapter returns normalized JSON.</desc>
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto-start-reverse">
       <path d="M1 1L8 5L1 9" fill="none" stroke="#73837b" stroke-width="1.5" />
@@ -29,8 +29,8 @@
   <rect x="852" y="88" width="300" height="132" rx="10" fill="#fff" stroke="#cbd5ce" stroke-width="2" />
   <rect x="852" y="88" width="8" height="132" rx="4" fill="#d64a3f" />
   <text x="880" y="133" fill="#17211e" font-family="Segoe UI, sans-serif" font-size="28" font-weight="700">ELTDX gateway</text>
-  <text x="880" y="171" fill="#53625b" font-family="ui-monospace, monospace" font-size="19">HTTP · :8000</text>
-  <text x="880" y="199" fill="#53625b" font-family="ui-monospace, monospace" font-size="18">quotes · bars · finance</text>
+  <text x="880" y="171" fill="#53625b" font-family="ui-monospace, monospace" font-size="19">HTTP · :8001</text>
+  <text x="880" y="199" fill="#53625b" font-family="ui-monospace, monospace" font-size="18">AkShare fallback</text>
 
   <line x1="48" y1="260" x2="1152" y2="260" stroke="#d7dfda" stroke-width="2" />
   <text x="48" y="301" fill="#53625b" font-family="ui-monospace, monospace" font-size="17">DATASETS</text>
