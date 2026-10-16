@@ -9,7 +9,6 @@ User=break
 WorkingDirectory=/opt/market-data-tick-adapter
 Environment=PYTHONUNBUFFERED=1
 Environment=MARKET_DATA_CONFIG=/opt/market-data-tick-adapter/config/data_sources.toml
-EnvironmentFile=-/opt/market-data-tick-adapter/.secrets/fuyao.env
 Environment=HOST=127.0.0.1
 Environment=PORT=3021
 ExecStart=/opt/market-data-tick-adapter/.venv/bin/market-data-tick-adapter
