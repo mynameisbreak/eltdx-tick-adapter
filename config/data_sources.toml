@@ -1,5 +1,5 @@
 [eltdx]
-url = "http://127.0.0.1:8000"
+url = "http://127.0.0.1:8001"
 timeout = 30
 
 [fuyao]
@@ -20,7 +20,7 @@ timeout = 30
 # Fuyao is preferred for documented coverage; Stock SDK serves uncovered data; ELTDX remains fallback.
 realtime_sources = ["fuyao", "stock_sdk", "eltdx"]
 daily_sources = ["fuyao", "stock_sdk", "eltdx"]
-minute_sources = ["stock_sdk", "eltdx"]
-depth5_sources = ["stock_sdk", "eltdx"]
+minute_sources = ["fuyao", "stock_sdk", "eltdx"]
+depth5_sources = ["fuyao", "stock_sdk", "eltdx"]
 # Optional first-request speed probe for realtime data.
 benchmark_on_start = false
