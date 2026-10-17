@@ -39,4 +39,14 @@ def result_rows(result: Any) -> list[dict[str, Any]]:
                 nested = value.get("item")
                 if isinstance(nested, list):
                     return [row for row in nested if isinstance(row, dict)]
+        sets = result.get("result_sets")
+        if isinstance(sets, list):
+            rows: list[dict[str, Any]] = []
+            for item in sets:
+                if isinstance(item, dict):
+                    value = item.get("rows")
+                    if isinstance(value, list):
+                        rows.extend(row for row in value if isinstance(row, dict))
+            if rows:
+                return rows
     return []
