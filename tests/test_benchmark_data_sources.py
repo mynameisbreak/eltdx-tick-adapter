@@ -56,7 +56,7 @@ async def test_benchmark_covers_all_data_endpoints_for_both_sources() -> None:
     ]
     assert akshare.calls[1][1]["period"] == "day"
     assert akshare.calls[2][1]["period"] == "1m"
-    assert akshare.calls[3][1]["count"] == 5000
+    assert akshare.calls[3][1]["count"] == 800
     assert akshare.calls[5][1]["report_type"] == "zcfzb"
 
 
