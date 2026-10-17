@@ -70,9 +70,13 @@ def build_cases(
         "start_time": bar_start, "end_time": bar_end,
     }
     full_minute_params = {
-        "code": code, "period": options.period, "count": 5000,
+        "code": code, "period": options.period, "count": 800,
         "start_time": session_start.isoformat(), "end_time": session_end.isoformat(),
     }
+
+    def eltdx_params(params: dict[str, Any]) -> dict[str, Any]:
+        # ELTDX Gateway 的 BarApi.get 不接受 start_time/end_time（与 app/main.py 的传参方式对齐）
+        return {key: value for key, value in params.items() if key not in ("start_time", "end_time")}
     depth_params = {"codes": [code]}
     factor_params = {"code": code}
     finance_params = {"code": code, "report_type": "zcfzb"}
@@ -86,15 +90,15 @@ def build_cases(
     return {
         "/realtime": {"ELTDX": eltdx_realtime, "AkShare": akshare_method("helpers.full_quotes", {"codes": []})},
         "/daily": {
-            "ELTDX": gateway_call("bars.get", daily_params),
+            "ELTDX": gateway_call("bars.get", eltdx_params(daily_params)),
             "AkShare": akshare_method("bars.get", daily_params),
         },
         "/minute": {
-            "ELTDX": gateway_call("bars.get", minute_params),
+            "ELTDX": gateway_call("bars.get", eltdx_params(minute_params)),
             "AkShare": akshare_method("bars.get", minute_params),
         },
         "/full_minute": {
-            "ELTDX": gateway_call("bars.get", full_minute_params),
+            "ELTDX": gateway_call("bars.get", eltdx_params(full_minute_params)),
             "AkShare": akshare_method("bars.get", full_minute_params),
         },
         "/adj_factor": {
