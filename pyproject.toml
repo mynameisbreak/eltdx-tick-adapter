@@ -1,6 +1,6 @@
 [project]
 name = "market-data-tick-adapter"
-version = "0.2.0"
+version = "0.3.0"
 description = "Expose ELTDX market data with AkShare fallback through Tick Stock Panel endpoints"
 requires-python = ">=3.11"
 dependencies = [
