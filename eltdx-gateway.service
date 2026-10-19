@@ -8,7 +8,7 @@ Type=simple
 User=break
 WorkingDirectory=/opt/market-data-tick-adapter
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/opt/market-data-tick-adapter/.venv/bin/eltdx-http --host 127.0.0.1 --port 8000
+ExecStart=/opt/market-data-tick-adapter/.venv/bin/eltdx-http --host 127.0.0.1 --port 8001
 Restart=on-failure
 RestartSec=5
 
