@@ -201,7 +201,8 @@ def count_for_period(period: str, start: datetime | None, end: datetime | None) 
     if start is None or end is None or end <= start:
         return _PERIOD_COUNTS[period]
     minutes = max(1, int((end - start).total_seconds() / 60))
-    return min(5000, max(_PERIOD_COUNTS[period], minutes // int(period[:-1]) + 2))
+    # eltdx bars.get rejects page sizes above MAX_KLINE_PAGE_SIZE (800).
+    return min(800, max(_PERIOD_COUNTS[period], minutes // int(period[:-1]) + 2))
 
 
 def count_for_daily(start: datetime | None, end: datetime | None) -> int:
