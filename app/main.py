@@ -133,20 +133,34 @@ async def realtime(symbols: str | None = Query(default=None)) -> dict[str, list[
 
 async def bars(request: BarsRequest) -> dict[str, list[dict[str, Any]]]:
     data: list[dict[str, Any]] = []
-    count = count_for_period(request.period, request.start_time, request.end_time)
+    desired = count_for_period(request.period, request.start_time, request.end_time)
     for symbol in request.symbols:
         try:
-            # eltdx bars.get only accepts integer offset (start) + count;
-            # start_time/end_time are not wire params. Fetch by count and filter
-            # locally via bar_in_range below.
-            params = {"code": to_tdx_code(symbol), "period": request.period, "count": count}
-            result = await gateway.call("bars.get", params)
+            # eltdx bars.get only accepts integer offset (start) + count and caps
+            # a single page at 800 bars (MAX_KLINE_PAGE_SIZE). Paginate via the
+            # start offset when the window needs more, then filter locally by
+            # time range via bar_in_range below.
+            rows: list[dict[str, Any]] = []
+            offset = 0
+            while offset < desired:
+                page = min(800, desired - offset)
+                result = await gateway.call("bars.get", {
+                    "code": to_tdx_code(symbol), "period": request.period,
+                    "count": page, "start": offset,
+                })
+                page_rows = result_rows(result)
+                if not page_rows:
+                    break
+                rows.extend(page_rows)
+                if len(page_rows) < page:
+                    break
+                offset += len(page_rows)
         except (AdapterError, ValueError) as exc:
             if isinstance(exc, AdapterError):
                 raise gateway_error(exc) from exc
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         data.extend(
-            normalized for row in result_rows(result)
+            normalized for row in rows
             if bar_in_range(row, request.start_time, request.end_time)
             and (normalized := normalize_bar(row, symbol))
         )
@@ -159,11 +173,8 @@ async def daily(request: DailyRequest) -> dict[str, list[dict[str, Any]]]:
     count = count_for_daily(request.start_time, request.end_time)
     for symbol in request.symbols:
         try:
+            # eltdx bars.get takes no start_time/end_time; filter locally below.
             params = {"code": to_tdx_code(symbol), "period": "day", "count": count, "adjust": "none"}
-            if request.start_time is not None:
-                params["start_time"] = request.start_time
-            if request.end_time is not None:
-                params["end_time"] = request.end_time
             result = await gateway.call("bars.get", params)
         except (AdapterError, ValueError) as exc:
             if isinstance(exc, AdapterError):
@@ -234,8 +245,10 @@ async def depth5(request: BarsRequest) -> dict[str, list[dict[str, Any]]]:
         if isinstance(exc, AdapterError):
             raise gateway_error(exc) from exc
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    data = [normalized for row, symbol in zip(result_rows(result), request.symbols)
-            if (normalized := normalize_depth5(row, symbol))]
+    # Attribute each row by its own code; rows without a resolvable code are
+    # dropped instead of being zipped positionally (gateway order is not guaranteed).
+    data = [normalized for row in result_rows(result)
+            if (normalized := normalize_depth5(row, None))]
     return {"data": data}
 
 
