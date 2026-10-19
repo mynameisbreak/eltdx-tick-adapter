@@ -136,11 +136,10 @@ async def bars(request: BarsRequest) -> dict[str, list[dict[str, Any]]]:
     count = count_for_period(request.period, request.start_time, request.end_time)
     for symbol in request.symbols:
         try:
+            # eltdx bars.get only accepts integer offset (start) + count;
+            # start_time/end_time are not wire params. Fetch by count and filter
+            # locally via bar_in_range below.
             params = {"code": to_tdx_code(symbol), "period": request.period, "count": count}
-            if request.start_time is not None:
-                params["start_time"] = request.start_time
-            if request.end_time is not None:
-                params["end_time"] = request.end_time
             result = await gateway.call("bars.get", params)
         except (AdapterError, ValueError) as exc:
             if isinstance(exc, AdapterError):
